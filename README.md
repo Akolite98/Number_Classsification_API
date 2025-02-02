@@ -50,8 +50,8 @@ GET /api/classify-number?number={number}
 ## Installation & Setup
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your-username/number-classification-api.git
-   ```
+   git clone https://github.com/Akolite98/Number_Classsification_API
+   
 2. Navigate to the project directory:
    ```sh
    cd number-classification-api
