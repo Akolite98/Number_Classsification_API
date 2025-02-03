@@ -1,7 +1,18 @@
 from flask import Flask, request, jsonify
 import requests
+from functools import lru_cache
 
 app = Flask(__name__)
+
+# Cache external API responses to avoid repeated calls
+@lru_cache(maxsize=100)
+def get_fun_fact(n):
+    url = f"http://numbersapi.com/{n}/math"
+    try:
+        response = requests.get(url, timeout=2)  # Add a timeout
+        return response.text if response.status_code == 200 else "No fun fact available."
+    except requests.exceptions.RequestException:
+        return "No fun fact available."
 
 # Helper functions
 def is_prime(n):
@@ -26,11 +37,6 @@ def is_armstrong(n):
 def digit_sum(n):
     return sum(int(d) for d in str(n))
 
-def get_fun_fact(n):
-    url = f"http://numbersapi.com/{n}/math"
-    response = requests.get(url)
-    return response.text if response.status_code == 200 else "No fun fact available."
-
 # API endpoint
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
@@ -54,6 +60,9 @@ def classify_number():
     else:
         properties.append("odd")
     
+    # Fetch fun fact
+    fun_fact = get_fun_fact(number)
+    
     # Prepare response
     response = {
         "number": number,
@@ -61,7 +70,7 @@ def classify_number():
         "is_perfect": is_perfect(number),
         "properties": properties,
         "digit_sum": digit_sum(number),
-        "fun_fact": get_fun_fact(number)
+        "fun_fact": fun_fact
     }
     
     return jsonify(response), 200
