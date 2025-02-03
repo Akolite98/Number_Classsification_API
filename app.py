@@ -1,85 +1,60 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
-from functools import lru_cache
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS handling
 
-# Cache external API responses to avoid repeated calls
-@lru_cache(maxsize=100)
-def get_fun_fact(n):
-    url = f"http://numbersapi.com/{n}/math"
-    try:
-        response = requests.get(url, timeout=2)  # Add a timeout
-        return response.text if response.status_code == 200 else "No fun fact available."
-    except requests.exceptions.RequestException:
-        return "No fun fact available."
-
-# Helper functions
+# Function to check if a number is prime
 def is_prime(n):
     if n < 2:
         return False
-    for i in range(2, int(n**0.5) + 1):
+    for i in range(2, int(n ** 0.5) + 1):
         if n % i == 0:
             return False
     return True
 
-def is_perfect(n):
-    if n < 2:
-        return False
-    divisors = [i for i in range(1, n) if n % i == 0]
-    return sum(divisors) == n
-
+# Function to check if a number is an Armstrong number
 def is_armstrong(n):
     digits = [int(d) for d in str(n)]
-    length = len(digits)
-    return sum(d**length for d in digits) == n
+    return sum(d ** len(digits) for d in digits) == n
 
-def digit_sum(n):
-    return sum(int(d) for d in str(n))
+# Function to check if a number is perfect
+def is_perfect(n):
+    return sum(i for i in range(1, n) if n % i == 0) == n
 
-# API endpoint
+# Function to get a fun fact about a number
+def get_fun_fact(n):
+    try:
+        response = requests.get(f"http://numbersapi.com/{n}/math?json")
+        return response.json().get("text", "No fun fact found")
+    except:
+        return "Could not retrieve a fun fact"
+
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
     number = request.args.get('number')
     
-    # Input validation
-    if not number or not number.lstrip('-').isdigit():
-        return jsonify({
-            "number": number,
-            "error": True
-        }), 400
+    if number is None or not number.lstrip('-').isdigit():
+        return jsonify({"number": number, "error": True}), 400
     
     number = int(number)
     
-    # Determine properties
     properties = []
     if is_armstrong(number):
         properties.append("armstrong")
-    if number % 2 == 0:
-        properties.append("even")
-    else:
-        properties.append("odd")
+    properties.append("odd" if number % 2 else "even")
     
-    # Fetch fun fact
-    fun_fact = get_fun_fact(number)
-    
-    # Prepare response
-    response = {
+    result = {
         "number": number,
         "is_prime": is_prime(number),
         "is_perfect": is_perfect(number),
         "properties": properties,
-        "digit_sum": digit_sum(number),
-        "fun_fact": fun_fact
+        "digit_sum": sum(int(d) for d in str(number)),
+        "fun_fact": get_fun_fact(number)
     }
     
-    return jsonify(response), 200
-
-# Handle CORS
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run()
